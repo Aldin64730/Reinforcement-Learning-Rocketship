@@ -107,3 +107,14 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ---- Project-specific (Rocket Lander / ML-Agents) ----
+# Python virtual environment for the ML-Agents trainer (recreate it with Docs/Stage1_Notes.md)
+/.venv/
+__pycache__/
+*.pyc
+
+# ML-Agents training output: keep configuration.yaml, run_logs, TensorBoard events and the final
+# <Behavior>.onnx of each run; skip the large intermediate checkpoints
+/results/**/*.pt
+/results/**/*-[0-9]*.onnx

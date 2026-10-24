@@ -1,0 +1,335 @@
+default_settings: null
+behaviors:
+  RocketLander:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 20480
+      learning_rate: 0.0003
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      shared_critic: false
+      learning_rate_schedule: linear
+      beta_schedule: linear
+      epsilon_schedule: linear
+    checkpoint_interval: 250000
+    network_settings:
+      normalize: false
+      hidden_units: 256
+      num_layers: 2
+      vis_encode_type: simple
+      memory: null
+      goal_conditioning_type: hyper
+      deterministic: false
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+        network_settings:
+          normalize: false
+          hidden_units: 128
+          num_layers: 2
+          vis_encode_type: simple
+          memory: null
+          goal_conditioning_type: hyper
+          deterministic: false
+    init_path: null
+    keep_checkpoints: 10
+    even_checkpoints: false
+    max_steps: 5000000
+    time_horizon: 128
+    summary_freq: 20000
+    threaded: false
+    self_play: null
+    behavioral_cloning: null
+env_settings:
+  env_path: null
+  env_args: null
+  base_port: 5005
+  num_envs: 1
+  num_areas: 1
+  timeout_wait: 60
+  seed: -1
+  max_lifetime_restarts: 10
+  restarts_rate_limit_n: 1
+  restarts_rate_limit_period_s: 60
+engine_settings:
+  width: 84
+  height: 84
+  quality_level: 5
+  time_scale: 20
+  target_frame_rate: -1
+  capture_frame_rate: 60
+  no_graphics: false
+  no_graphics_monitor: false
+environment_parameters:
+  spawn_height_min:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5282
+          value: 3.0
+      name: Hop
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5283
+          value: 5.0
+      name: Low
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5284
+          value: 8.0
+      name: Full
+      completion_criteria: null
+  spawn_height_max:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5285
+          value: 6.0
+      name: Hop
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5286
+          value: 10.0
+      name: Low
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5287
+          value: 15.0
+      name: Full
+      completion_criteria: null
+  spawn_horizontal_radius:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5288
+          value: 0.5
+      name: Hop
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5289
+          value: 1.0
+      name: Low
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5290
+          value: 2.0
+      name: Full
+      completion_criteria: null
+  spawn_tilt_max_deg:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5291
+          value: 0.0
+      name: Hop
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5292
+          value: 3.0
+      name: Low
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5293
+          value: 5.0
+      name: Full
+      completion_criteria: null
+  spawn_speed_max:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5294
+          value: 0.5
+      name: Hop
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5295
+          value: 1.0
+      name: Low
+      completion_criteria:
+        behavior: RocketLander
+        measure: reward
+        min_lesson_length: 300
+        signal_smoothing: true
+        threshold: 10.0
+        require_reset: false
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5296
+          value: 1.5
+      name: Full
+      completion_criteria: null
+  spawn_angular_speed_max:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5297
+          value: 0.0
+      name: spawn_angular_speed_max
+      completion_criteria: null
+  fuel_capacity:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5298
+          value: 60.0
+      name: fuel_capacity
+      completion_criteria: null
+  max_episode_seconds:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5299
+          value: 30.0
+      name: max_episode_seconds
+      completion_criteria: null
+  bounds_radius:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5300
+          value: 30.0
+      name: bounds_radius
+      completion_criteria: null
+  ceiling_height:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5301
+          value: 40.0
+      name: ceiling_height
+      completion_criteria: null
+  wind_speed_min:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5302
+          value: 0.0
+      name: wind_speed_min
+      completion_criteria: null
+  wind_speed_max:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5303
+          value: 0.0
+      name: wind_speed_max
+      completion_criteria: null
+  gust_speed_max:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5304
+          value: 0.0
+      name: gust_speed_max
+      completion_criteria: null
+  turbulence_intensity:
+    curriculum:
+    - value:
+        sampler_type: constant
+        sampler_parameters:
+          seed: 5305
+          value: 0.0
+      name: turbulence_intensity
+      completion_criteria: null
+checkpoint_settings:
+  run_id: stage1_v1
+  initialize_from: null
+  load_model: false
+  resume: false
+  force: false
+  train_model: false
+  inference: false
+  results_dir: results
+torch_settings:
+  device: cpu
+debug: false

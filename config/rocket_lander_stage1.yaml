@@ -1,0 +1,103 @@
+# ML-Agents trainer config - Rocket Lander, STAGE 1 (vertical landing from small offsets)
+# Run from the project root (with the Python venv):
+#   mlagents-learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu
+# then press Play in the Unity Editor (scene Assets/RocketLander/Scenes/RocketTraining.unity).
+
+behaviors:
+  RocketLander:                     # must equal Behavior Parameters > Behavior Name
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024              # samples per gradient step (continuous control: 512-5120)
+      buffer_size: 20480            # samples collected before each update (~20 x batch)
+      learning_rate: 3.0e-4
+      learning_rate_schedule: linear  # decays to 0 at max_steps
+      beta: 5.0e-3                  # entropy bonus: keeps exploring early on
+      beta_schedule: linear
+      epsilon: 0.2                  # PPO clip range: how far one update may move the policy
+      epsilon_schedule: linear
+      lambd: 0.95                   # GAE lambda: bias/variance trade-off of the advantage estimate
+      num_epoch: 3                  # passes over the buffer per update
+    network_settings:
+      normalize: false              # observations are already normalised in C# with FIXED scales
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.99                 # 1 decision = 0.1 s -> effective horizon ~100 decisions (~10 s)
+        strength: 1.0
+    time_horizon: 128               # steps per trajectory chunk before bootstrapping with the value function
+    max_steps: 5.0e6                # total agent decisions (all 16 agents together); stop early if converged
+    summary_freq: 20000
+    checkpoint_interval: 250000
+    keep_checkpoints: 10
+
+# Curriculum: all spawn parameters share IDENTICAL completion criteria, so they advance together.
+# Lesson advances when the smoothed mean episode reward over the last min_lesson_length episodes
+# reaches the threshold. A landing is worth ~ +14..+17 and a failure ~ -5..-10, so 10 ~ 80%+ success.
+environment_parameters:
+  spawn_height_min:                 # feet height above the pad top (m)
+    curriculum:
+      - name: Hop
+        completion_criteria: &advance
+          measure: reward
+          behavior: RocketLander
+          signal_smoothing: true
+          min_lesson_length: 300
+          threshold: 10.0
+        value: 3.0
+      - name: Low
+        completion_criteria: *advance
+        value: 5.0
+      - name: Full
+        value: 8.0
+  spawn_height_max:
+    curriculum:
+      - name: Hop
+        completion_criteria: *advance
+        value: 6.0
+      - name: Low
+        completion_criteria: *advance
+        value: 10.0
+      - name: Full
+        value: 15.0
+  spawn_horizontal_radius:          # m, uniform over a disc around the pad centre
+    curriculum:
+      - name: Hop
+        completion_criteria: *advance
+        value: 0.5
+      - name: Low
+        completion_criteria: *advance
+        value: 1.0
+      - name: Full
+        value: 2.0
+  spawn_tilt_max_deg:
+    curriculum:
+      - name: Hop
+        completion_criteria: *advance
+        value: 0.0
+      - name: Low
+        completion_criteria: *advance
+        value: 3.0
+      - name: Full
+        value: 5.0
+  spawn_speed_max:                  # m/s, random direction
+    curriculum:
+      - name: Hop
+        completion_criteria: *advance
+        value: 0.5
+      - name: Low
+        completion_criteria: *advance
+        value: 1.0
+      - name: Full
+        value: 1.5
+
+  # Constant in Stage 1 (listed so every run records its full settings).
+  spawn_angular_speed_max: 0.0
+  fuel_capacity: 60.0
+  max_episode_seconds: 30.0
+  bounds_radius: 30.0
+  ceiling_height: 40.0
+  wind_speed_min: 0.0               # Stage 3
+  wind_speed_max: 0.0
+  gust_speed_max: 0.0
+  turbulence_intensity: 0.0
