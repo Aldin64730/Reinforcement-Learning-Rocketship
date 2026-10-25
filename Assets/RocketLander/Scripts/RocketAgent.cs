@@ -142,6 +142,7 @@ namespace RocketLander
         float previousPotential;
         Vector3 lastActions;          // (main, pitch, roll) as sent by the policy, [-1, 1]
         bool touchedDown;
+        float spawnAltitude;
         float touchdownSpeed;
         float manualThrottle;         // keyboard heuristic
 
@@ -199,7 +200,9 @@ namespace RocketLander
             lastActions = new Vector3(-1f, 0f, 0f); // engine off, no torque
             manualThrottle = 0f;
             rShaping = rDense = rFuel = rTerminal = 0f;
-            previousPotential = Potential(Measure());
+            FlightState start = Measure();
+            spawnAltitude = start.altitude;
+            previousPotential = Potential(start);
         }
 
         // ------------------------------------------------------------ observations
@@ -388,8 +391,30 @@ namespace RocketLander
                 Debug.Log($"[RocketAgent] {name}: {outcome} after {episodeTime:F1}s, reward {lastEpisodeReward:F2} " +
                           $"(shaping {rShaping:F2}, dense {rDense:F2}, fuel {rFuel:F2}, terminal {rTerminal:F2}), " +
                           $"dist {s.horizontalDistance:F2} m, touchdown {touchdownSpeed:F2} m/s, tilt {s.tiltDeg:F1} deg", this);
+
+            EpisodeEnded?.Invoke(this, new EpisodeSummary
+            {
+                outcome = outcome,
+                reward = lastEpisodeReward,
+                seconds = episodeTime,
+                distance = s.horizontalDistance,
+                touchdownSpeed = touchdownSpeed,
+                tiltDeg = s.tiltDeg,
+                fuelUsedFraction = 1f - rocket.FuelFraction,
+                spawnAltitude = spawnAltitude,
+            });
             EndEpisode();
         }
+
+        /// <summary>Result of one finished episode (used by the showcase and evaluation tools).</summary>
+        public struct EpisodeSummary
+        {
+            public EpisodeOutcome outcome;
+            public float reward, seconds, distance, touchdownSpeed, tiltDeg, fuelUsedFraction, spawnAltitude;
+        }
+
+        /// <summary>Raised at the end of every episode, just before the rocket is reset.</summary>
+        public event System.Action<RocketAgent, EpisodeSummary> EpisodeEnded;
 
         /// <summary>Custom TensorBoard metrics. "Average" aggregation of 0/1 values gives rates.</summary>
         void RecordStats(EpisodeOutcome outcome, in FlightState s)

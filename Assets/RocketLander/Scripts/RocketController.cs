@@ -352,6 +352,18 @@ namespace RocketLander
 
         // ---------------- Visuals ----------------
 
+        /// <summary>Drives only the flame visuals (used when replaying a recorded flight; no forces).</summary>
+        public void SetReplayVisuals(float main, float front, float back, float left, float right)
+        {
+            MainThrottle = main;
+            sideThrottle[Front] = front;
+            sideThrottle[Back] = back;
+            sideThrottle[Left] = left;
+            sideThrottle[Right] = right;
+            effectiveFuelScale = 1f;
+            UpdateFlames();
+        }
+
         void UpdateFlames()
         {
             if (flameBaseScales == null) return;
