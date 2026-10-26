@@ -16,7 +16,7 @@ py -3.10 -m venv .venv
 .\.venv\Scripts\python -m pip install torch~=2.2.1 --index-url https://download.pytorch.org/whl/cpu
 .\.venv\Scripts\python -m pip install mlagents==1.1.0
 .\.venv\Scripts\python -m pip install "setuptools==69.5.1" "torch~=2.2.1" --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
-.\.venv\Scripts\mlagents-learn --help
+.\.venv\Scripts\python -m mlagents.trainers.learn --help
 ```
 
 - **setuptools must be < 81.** mlagents 1.1.0 imports `pkg_resources`, which newer setuptools removed. The error is `ModuleNotFoundError: No module named 'pkg_resources'`.
@@ -24,7 +24,7 @@ py -3.10 -m venv .venv
 
 - **CPU PyTorch on purpose.** A 2x256 MLP trains as fast on the CPU, and the torch 2.2 CUDA wheels predate RTX 50-series (Blackwell) support.
 - If `pip install mlagents` fails building `grpcio`, run `.\.venv\Scripts\python -m pip install grpcio==1.48.2` first, then retry.
-- You can activate the venv with `.\.venv\Scripts\Activate.ps1`. If PowerShell blocks scripts, just call `.\.venv\Scripts\mlagents-learn` directly as shown above.
+- You can activate the venv with `.\.venv\Scripts\Activate.ps1`. If PowerShell blocks scripts, call the venv Python directly as shown above. Windows Smart App Control blocks the generated `mlagents-learn.exe` / `tensorboard.exe` launchers, so always use `python -m mlagents.trainers.learn` and `python -m tensorboard.main`.
 
 ## 2. Scene setup (already done in the Editor; repeat these steps to rebuild it by hand)
 
@@ -141,13 +141,13 @@ Reward-hacking risks and what blocks them:
 ## 4. Training
 
 ```powershell
-.\.venv\Scripts\mlagents-learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu
+.\.venv\Scripts\python -m mlagents.trainers.learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu
 ```
 When it says "Start training by pressing the Play button", press **Play** in Unity. Ctrl+C stops training and saves `results/stage1_v1/RocketLander.onnx`. Add `--resume` to continue a run, or `--force` to overwrite one.
 
 **Faster: build an executable.** File > Build Profiles > Windows. Untick Development Build. Build to `Builds/RocketLander/RocketLander.exe`. Then run:
 ```powershell
-.\.venv\Scripts\mlagents-learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu --env=Builds/RocketLander/RocketLander.exe --num-envs=4 --no-graphics
+.\.venv\Scripts\python -m mlagents.trainers.learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu --env=Builds/RocketLander/RocketLander.exe --num-envs=4 --no-graphics
 ```
 16 areas x 4 processes = 64 rockets in parallel. Rebuild the exe after every C# or scene change.
 
@@ -173,7 +173,7 @@ When it says "Start training by pressing the Play button", press **Play** in Uni
 ## 5. Monitoring
 
 ```powershell
-.\.venv\Scripts\tensorboard --logdir results
+.\.venv\Scripts\python -m tensorboard.main --logdir results
 ```
 Open http://localhost:6006.
 

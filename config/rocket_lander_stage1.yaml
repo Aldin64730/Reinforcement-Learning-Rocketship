@@ -1,6 +1,6 @@
 # ML-Agents trainer config - Rocket Lander, STAGE 1 (vertical landing from small offsets)
 # Run from the project root (with the Python venv):
-#   mlagents-learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu
+#   .\.venv\Scripts\python -m mlagents.trainers.learn config/rocket_lander_stage1.yaml --run-id=stage1_v1 --torch-device=cpu
 # then press Play in the Unity Editor (scene Assets/RocketLander/Scenes/RocketTraining.unity).
 
 behaviors:

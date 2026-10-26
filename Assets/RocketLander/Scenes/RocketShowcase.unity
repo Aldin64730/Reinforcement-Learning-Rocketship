@@ -205,8 +205,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.07166049, y: 0.7028432, z: -0.0714963, w: 0.7041055}
-  m_LocalPosition: {x: -109.553505, y: 45.31891, z: 145.51218}
+  m_LocalRotation: {x: 0.08995035, y: 0.7059014, z: -0.0911307, w: 0.6966401}
+  m_LocalPosition: {x: -93.41491, y: 33.818085, z: -2.0791168}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -463,12 +463,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RocketLander.ShowcaseDirector
   agent: {fileID: 500129576803426987}
   showcaseCamera: {fileID: 330585545}
-  episodesToEvaluate: 100
+  episodesToEvaluate: 200
   physicsStepsPerFrame: 1000
+  exportCsv: 1
   bestBy: 0
   replaySpeed: 1
   pauseAfterReplay: 2
-  cameraOffset: {x: 0, y: 2.5, z: -22}
+  cameraOffset: {x: 0, y: 3, z: -26}
   cameraSmoothing: 3
 --- !u!4 &1024282312
 Transform:
@@ -533,6 +534,46 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: boundsRadius
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: fuelCapacity
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: ceilingHeight
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnSpeedMax
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnHeightMax
+      value: 35
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnHeightMin
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnTiltMaxDeg
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: maxEpisodeSeconds
+      value: 45
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnAngularSpeedMax
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: spawnHorizontalRadius
+      value: 20
+      objectReference: {fileID: 0}
     - target: {fileID: 1715890192681164164, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
       propertyPath: m_Name
       value: ShowcaseArea
@@ -541,6 +582,10 @@ PrefabInstance:
       propertyPath: showHud
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6593810614396451478, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 5022602860645237092, guid: 35cb9716c89cebb41a32d46d1d43c630, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

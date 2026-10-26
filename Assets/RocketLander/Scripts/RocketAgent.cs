@@ -18,6 +18,8 @@ namespace RocketLander
         [Header("Potential-based shaping: r = Phi(s') - Phi(s)")]
         [Tooltip("Phi -= this * horizontal distance to pad centre (per m).")]
         public float distanceWeight = 0.3f;
+        [Tooltip("Phi -= this * min(distance, precisionRadius): a steeper pull towards the exact centre close to the pad (per m). Reward v2.")]
+        public float nearDistanceWeight = 0.7f;
         [Tooltip("Phi -= this * altitude above pad (per m).")]
         public float altitudeWeight = 0.1f;
         [Tooltip("Phi -= this * speed (per m/s).")]
@@ -43,8 +45,12 @@ namespace RocketLander
 
         [Header("Terminal rewards")]
         public float landingReward = 10f;
-        [Tooltip("Extra reward for landing near the centre: precisionBonus * (1 - distance / padHalfSize).")]
-        public float precisionBonus = 5f;
+        [Tooltip("Extra reward for landing near the centre: precisionBonus * (1 - distance / precisionRadius).")]
+        public float precisionBonus = 8f;
+        [Tooltip("Distance from the centre (m) at which the precision bonus reaches 0. Reward v1 used the pad half size (5 m).")]
+        public float precisionRadius = 3f;
+        [Tooltip("Extra reward for a soft landing: softLandingBonus * (1 - touchdownSpeed / maxImpactSpeed). Reward v2.")]
+        public float softLandingBonus = 5f;
         public float crashPenalty = -10f;
         [Tooltip("Touching the ground (off the pad) without crashing.")]
         public float offPadPenalty = -6f;
@@ -142,7 +148,7 @@ namespace RocketLander
         float previousPotential;
         Vector3 lastActions;          // (main, pitch, roll) as sent by the policy, [-1, 1]
         bool touchedDown;
-        float spawnAltitude;
+        float spawnAltitude, spawnDistance, spawnTiltDeg, maxTiltDeg;
         float touchdownSpeed;
         float manualThrottle;         // keyboard heuristic
 
@@ -202,6 +208,9 @@ namespace RocketLander
             rShaping = rDense = rFuel = rTerminal = 0f;
             FlightState start = Measure();
             spawnAltitude = start.altitude;
+            spawnDistance = start.horizontalDistance;
+            spawnTiltDeg = start.tiltDeg;
+            maxTiltDeg = start.tiltDeg;
             previousPotential = Potential(start);
         }
 
@@ -249,6 +258,7 @@ namespace RocketLander
             rocket.LatchContacts(Academy.Instance.TotalStepCount);
             episodeTime += dt;
             FlightState s = Measure();
+            maxTiltDeg = Mathf.Max(maxTiltDeg, s.tiltDeg);
 
             if (!touchedDown && rocket.FeetOnPad + rocket.FeetOnGround > 0)
             {
@@ -339,6 +349,7 @@ namespace RocketLander
         float Potential(in FlightState s)
         {
             return -rewards.distanceWeight * s.horizontalDistance
+                   - rewards.nearDistanceWeight * Mathf.Min(s.horizontalDistance, rewards.precisionRadius)
                    - rewards.altitudeWeight * Mathf.Max(0f, s.altitude)
                    - rewards.speedWeight * s.speed
                    - rewards.tiltWeight * s.tiltDeg * Mathf.Deg2Rad
@@ -374,7 +385,8 @@ namespace RocketLander
             {
                 case EpisodeOutcome.Landed:
                     terminal = rewards.landingReward
-                               + rewards.precisionBonus * Mathf.Clamp01(1f - s.horizontalDistance / environment.pad.HalfSize);
+                               + rewards.precisionBonus * Mathf.Clamp01(1f - s.horizontalDistance / rewards.precisionRadius)
+                               + rewards.softLandingBonus * Mathf.Clamp01(1f - touchdownSpeed / landing.maxImpactSpeed);
                     break;
                 case EpisodeOutcome.Crashed:
                 case EpisodeOutcome.TippedOver: terminal = rewards.crashPenalty; break;
@@ -402,6 +414,9 @@ namespace RocketLander
                 tiltDeg = s.tiltDeg,
                 fuelUsedFraction = 1f - rocket.FuelFraction,
                 spawnAltitude = spawnAltitude,
+                spawnDistance = spawnDistance,
+                spawnTiltDeg = spawnTiltDeg,
+                maxTiltDeg = maxTiltDeg,
             });
             EndEpisode();
         }
@@ -410,7 +425,8 @@ namespace RocketLander
         public struct EpisodeSummary
         {
             public EpisodeOutcome outcome;
-            public float reward, seconds, distance, touchdownSpeed, tiltDeg, fuelUsedFraction, spawnAltitude;
+            public float reward, seconds, distance, touchdownSpeed, tiltDeg, fuelUsedFraction;
+            public float spawnAltitude, spawnDistance, spawnTiltDeg, maxTiltDeg;
         }
 
         /// <summary>Raised at the end of every episode, just before the rocket is reset.</summary>
@@ -428,6 +444,10 @@ namespace RocketLander
             stats.Add("Outcome/Timeout", outcome == EpisodeOutcome.Timeout ? 1f : 0f);
 
             stats.Add("Rocket/EpisodeSeconds", episodeTime);
+            stats.Add("Rocket/MaxTiltDeg", maxTiltDeg);
+            stats.Add("Spawn/Height", spawnAltitude);
+            stats.Add("Spawn/Distance", spawnDistance);
+            stats.Add("Spawn/TiltDeg", spawnTiltDeg);
             stats.Add("Rocket/FinalDistance", s.horizontalDistance);
             stats.Add("Rocket/FuelUsedFraction", 1f - rocket.FuelFraction);
             stats.Add("Rocket/FuelUsedMain", rocket.FuelUsedMain);

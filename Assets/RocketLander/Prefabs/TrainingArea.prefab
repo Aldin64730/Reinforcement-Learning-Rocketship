@@ -702,6 +702,7 @@ MonoBehaviour:
   environment: {fileID: 1692750535158210226}
   rewards:
     distanceWeight: 0.3
+    nearDistanceWeight: 0.7
     altitudeWeight: 0.1
     speedWeight: 0.3
     tiltWeight: 2
@@ -713,7 +714,9 @@ MonoBehaviour:
     safeTouchdownSpeed: 1
     safeDescentSlope: 0.5
     landingReward: 10
-    precisionBonus: 5
+    precisionBonus: 8
+    precisionRadius: 3
+    softLandingBonus: 5
     crashPenalty: -10
     offPadPenalty: -6
     outOfBoundsPenalty: -10

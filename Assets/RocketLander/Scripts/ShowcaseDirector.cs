@@ -33,6 +33,8 @@ namespace RocketLander
         public int episodesToEvaluate = 100;
         [Tooltip("Physics steps simulated per rendered frame while evaluating (higher = faster).")]
         public int physicsStepsPerFrame = 1000;
+        [Tooltip("Write every evaluated episode to <project>/Evaluation/<scene>_<time>.csv (for thesis plots).")]
+        public bool exportCsv = true;
 
         [Header("Replay")]
         public BestBy bestBy = BestBy.HighestReward;
@@ -63,6 +65,8 @@ namespace RocketLander
         Flight current;
         readonly Flight[] best = new Flight[3];
         int evaluated, landed;
+        readonly List<RocketAgent.EpisodeSummary> allSummaries = new List<RocketAgent.EpisodeSummary>();
+        string lastCsv;
         float replayTime;
         bool paused;
         float dt;
@@ -95,6 +99,7 @@ namespace RocketLander
         {
             phase = Phase.Evaluating;
             evaluated = landed = 0;
+            allSummaries.Clear();
             for (int i = 0; i < best.Length; i++) best[i] = null;
             current = new Flight();
 
@@ -136,6 +141,7 @@ namespace RocketLander
         {
             if (phase != Phase.Evaluating) return;
             current.summary = summary;
+            allSummaries.Add(summary);
             evaluated++;
             if (summary.outcome == EpisodeOutcome.Landed) landed++;
             for (int i = 0; i < best.Length; i++)
@@ -158,8 +164,33 @@ namespace RocketLander
 
         // ---------------------------------------------------------------- replay
 
+        void WriteCsv()
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            string dir = System.IO.Path.Combine(Application.dataPath, "..", "Evaluation");
+            System.IO.Directory.CreateDirectory(dir);
+            var modelAsset = agent.GetComponent<Unity.MLAgents.Policies.BehaviorParameters>().Model;
+            string model = modelAsset ? modelAsset.name : "heuristic";
+            string file = System.IO.Path.Combine(dir,
+                $"{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}_{model}_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("episode,outcome,reward,seconds,spawn_height,spawn_distance,spawn_tilt_deg,max_tilt_deg,landing_distance,touchdown_speed,final_tilt_deg,fuel_used");
+            for (int i = 0; i < allSummaries.Count; i++)
+            {
+                var s = allSummaries[i];
+                sb.AppendLine(string.Join(",", i.ToString(inv), s.outcome.ToString(), s.reward.ToString("F3", inv), s.seconds.ToString("F2", inv),
+                    s.spawnAltitude.ToString("F2", inv), s.spawnDistance.ToString("F2", inv), s.spawnTiltDeg.ToString("F2", inv),
+                    s.maxTiltDeg.ToString("F2", inv), s.distance.ToString("F3", inv), s.touchdownSpeed.ToString("F3", inv),
+                    s.tiltDeg.ToString("F2", inv), s.fuelUsedFraction.ToString("F3", inv)));
+            }
+            System.IO.File.WriteAllText(file, sb.ToString());
+            lastCsv = System.IO.Path.GetFullPath(file);
+            Debug.Log("[Showcase] Wrote " + lastCsv);
+        }
+
         void BeginReplay()
         {
+            if (exportCsv && allSummaries.Count > 0) WriteCsv();
             phase = Phase.Replaying;
             // Freeze the simulation: the rocket is now just posed from the recording.
             rocket.Body.isKinematic = true;

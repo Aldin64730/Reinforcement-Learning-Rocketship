@@ -118,3 +118,7 @@ __pycache__/
 # <Behavior>.onnx of each run; skip the large intermediate checkpoints
 /results/**/*.pt
 /results/**/*-[0-9]*.onnx
+
+# ML-Agents writes timing profiles here every Play session (machine-specific, changes constantly)
+/[Aa]ssets/ML-Agents/
+/[Aa]ssets/ML-Agents.meta
