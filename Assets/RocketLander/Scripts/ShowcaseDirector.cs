@@ -50,6 +50,7 @@ namespace RocketLander
             public Vector3 position;
             public Quaternion rotation;
             public float main, front, back, left, right;
+            public Vector3 wind;
         }
 
         class Flight
@@ -107,6 +108,7 @@ namespace RocketLander
             Academy.Instance.AutomaticSteppingEnabled = false;
             Physics.simulationMode = SimulationMode.Script;
             rocket.Body.isKinematic = false;
+            if (windArrow) windArrow.enabled = false;
             rocket.Body.interpolation = RigidbodyInterpolation.None;
         }
 
@@ -134,6 +136,7 @@ namespace RocketLander
                 back = rocket.SideThrottle(RocketController.Back),
                 left = rocket.SideThrottle(RocketController.Left),
                 right = rocket.SideThrottle(RocketController.Right),
+                wind = rocket.CurrentWind,
             });
         }
 
@@ -169,19 +172,23 @@ namespace RocketLander
             var inv = System.Globalization.CultureInfo.InvariantCulture;
             string dir = System.IO.Path.Combine(Application.dataPath, "..", "Evaluation");
             System.IO.Directory.CreateDirectory(dir);
-            var modelAsset = agent.GetComponent<Unity.MLAgents.Policies.BehaviorParameters>().Model;
-            string model = modelAsset ? modelAsset.name : "heuristic";
+            var bp = agent.GetComponent<Unity.MLAgents.Policies.BehaviorParameters>();
+            var modelAsset = bp.Model;
+            string model = bp.BehaviorType == Unity.MLAgents.Policies.BehaviorType.HeuristicOnly || !modelAsset
+                ? "heuristic_" + agent.heuristicMode
+                : modelAsset.name;
             string file = System.IO.Path.Combine(dir,
                 $"{UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}_{model}_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine("episode,outcome,reward,seconds,spawn_height,spawn_distance,spawn_tilt_deg,max_tilt_deg,landing_distance,touchdown_speed,final_tilt_deg,fuel_used");
+            sb.AppendLine("episode,outcome,reward,seconds,spawn_height,spawn_distance,spawn_tilt_deg,max_tilt_deg,landing_distance,touchdown_speed,final_tilt_deg,fuel_used,wind_mean,wind_max,wind_dir_deg");
             for (int i = 0; i < allSummaries.Count; i++)
             {
                 var s = allSummaries[i];
                 sb.AppendLine(string.Join(",", i.ToString(inv), s.outcome.ToString(), s.reward.ToString("F3", inv), s.seconds.ToString("F2", inv),
                     s.spawnAltitude.ToString("F2", inv), s.spawnDistance.ToString("F2", inv), s.spawnTiltDeg.ToString("F2", inv),
                     s.maxTiltDeg.ToString("F2", inv), s.distance.ToString("F3", inv), s.touchdownSpeed.ToString("F3", inv),
-                    s.tiltDeg.ToString("F2", inv), s.fuelUsedFraction.ToString("F3", inv)));
+                    s.tiltDeg.ToString("F2", inv), s.fuelUsedFraction.ToString("F3", inv),
+                    s.windMeanSpeed.ToString("F2", inv), s.windMaxSpeed.ToString("F2", inv), s.windDirectionDeg.ToString("F1", inv)));
             }
             System.IO.File.WriteAllText(file, sb.ToString());
             lastCsv = System.IO.Path.GetFullPath(file);
@@ -232,28 +239,80 @@ namespace RocketLander
             rocket.SetReplayVisuals(Mathf.Lerp(a.main, b.main, t), Mathf.Lerp(a.front, b.front, t),
                                     Mathf.Lerp(a.back, b.back, t), Mathf.Lerp(a.left, b.left, t),
                                     Mathf.Lerp(a.right, b.right, t));
+            replayWind = Vector3.Lerp(a.wind, b.wind, t);
+            UpdateWindArrow();
+        }
+
+        // ---------------------------------------------------------------- wind arrow
+
+        [Header("Wind arrow (replay)")]
+        [Tooltip("Arrow length per m/s of wind.")]
+        public float windArrowScale = 0.6f;
+        public Color windArrowColor = new Color(0.2f, 0.75f, 1f);
+
+        Vector3 replayWind;
+        LineRenderer windArrow;
+
+        /// <summary>Draws an arrow beside the rocket that points where the wind blows, length proportional to speed (min 1 m).</summary>
+        void UpdateWindArrow()
+        {
+            if (!windArrow)
+            {
+                windArrow = new GameObject("WindArrow").AddComponent<LineRenderer>();
+                Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
+                var mat = new Material(shader);
+                mat.SetColor("_BaseColor", windArrowColor);
+                mat.color = windArrowColor;
+                windArrow.sharedMaterial = mat;
+                windArrow.positionCount = 5;
+                windArrow.widthMultiplier = 0.3f;
+                windArrow.numCapVertices = 2;
+                windArrow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            Vector3 w = new Vector3(replayWind.x, 0f, replayWind.z);
+            bool show = phase == Phase.Replaying && w.magnitude > 0.2f;
+            windArrow.enabled = show;
+            if (!show) return;
+
+            // Beside the rocket (to the camera's right, above the pods), pointing where the wind blows.
+            Vector3 dir = w.normalized;
+            float length = Mathf.Max(1f, w.magnitude * windArrowScale);
+            Vector3 camRight = showcaseCamera ? Vector3.ProjectOnPlane(showcaseCamera.transform.right, Vector3.up).normalized : Vector3.right;
+            Vector3 centre = rocket.transform.position + camRight * 5f + Vector3.up * 2.5f;
+            Vector3 tail = centre - dir * (length * 0.5f);
+            Vector3 tip = centre + dir * (length * 0.5f);
+            Vector3 side = Vector3.Cross(Vector3.up, dir) * 0.7f + Vector3.up * 0.3f; // tilt the head up so it reads end-on too
+            Vector3 back = -dir * 1.0f;
+            windArrow.SetPositions(new[] { tail, tip, tip + back + side, tip, tip + back - side });
         }
 
         // ---------------------------------------------------------------- camera
 
+        // Keep both the rocket (weighted more) and the pad in frame; back off as they get further apart.
         Vector3 LookTarget()
         {
             Vector3 pad = agent.environment.PadTop;
-            return Vector3.Lerp(pad, rocket.transform.position, 0.6f);
+            return Vector3.Lerp(pad, rocket.transform.position, 0.75f);
+        }
+
+        Vector3 DesiredCameraPosition()
+        {
+            float separation = Vector3.Distance(rocket.transform.position, agent.environment.PadTop);
+            return LookTarget() + cameraOffset * (1f + separation / 40f);
         }
 
         void SnapCamera()
         {
             if (!showcaseCamera || phase != Phase.Replaying || Shown == null) return;
             ApplyFrame(Shown, 0f);
-            showcaseCamera.transform.position = rocket.transform.position + cameraOffset;
+            showcaseCamera.transform.position = DesiredCameraPosition();
             showcaseCamera.transform.LookAt(LookTarget());
         }
 
         void LateUpdate()
         {
             if (!showcaseCamera || phase != Phase.Replaying) return;
-            Vector3 desired = rocket.transform.position + cameraOffset;
+            Vector3 desired = DesiredCameraPosition();
             float k = 1f - Mathf.Exp(-cameraSmoothing * Time.deltaTime);
             showcaseCamera.transform.position = Vector3.Lerp(showcaseCamera.transform.position, desired, k);
             Quaternion look = Quaternion.LookRotation(LookTarget() - showcaseCamera.transform.position);
@@ -280,8 +339,8 @@ namespace RocketLander
         void OnGUI()
         {
             var style = new GUIStyle(GUI.skin.label) { fontSize = 16 };
-            GUI.Box(new Rect(10, 10, 430, 250), GUIContent.none);
-            var r = new Rect(22, 18, 410, 240);
+            GUI.Box(new Rect(10, 10, 430, 300), GUIContent.none);
+            var r = new Rect(22, 18, 410, 290);
 
             if (phase == Phase.Evaluating)
             {
@@ -304,7 +363,9 @@ namespace RocketLander
                 $"Spawn height   {s.spawnAltitude:F1} m\n" +
                 $"Landing offset {s.distance:F2} m from centre\n" +
                 $"Touchdown      {s.touchdownSpeed:F2} m/s\n" +
-                $"Flight time    {s.seconds:F1} s\n\n" +
+                $"Flight time    {s.seconds:F1} s\n" +
+                $"Wind           mean {s.windMeanSpeed:F1} m/s, peak {s.windMaxSpeed:F1} m/s\n" +
+                $"Wind now       {new Vector3(now.wind.x, 0f, now.wind.z).magnitude:F1} m/s (blue arrow)\n\n" +
                 $"Replay {Mathf.Min(replayTime, duration):F1} / {duration:F1} s   x{replaySpeed:0.###}{(paused ? "  PAUSED" : "")}   alt {Mathf.Max(0f, altitude):F1} m",
                 style);
             GUI.Label(new Rect(12, Screen.height - 30, 700, 24),

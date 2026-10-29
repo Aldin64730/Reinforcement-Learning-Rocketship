@@ -741,6 +741,9 @@ MonoBehaviour:
     velocityGain: 1
     maxLateralAccel: 2
     maxTiltDeg: 15
+    integralGain: 0.1
+    integralLimit: 3
+    integralRadius: 3
     descentGain: 0.4
     maxDescentSpeed: 5
     touchdownSpeed: 0.6

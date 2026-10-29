@@ -471,6 +471,8 @@ MonoBehaviour:
   pauseAfterReplay: 2
   cameraOffset: {x: 0, y: 3, z: -26}
   cameraSmoothing: 3
+  windArrowScale: 0.6
+  windArrowColor: {r: 0.2, g: 0.75, b: 1, a: 1}
 --- !u!4 &1024282312
 Transform:
   m_ObjectHideFlags: 0
@@ -543,6 +545,14 @@ PrefabInstance:
       value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: gustSpeedMax
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: windSpeedMax
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
       propertyPath: ceilingHeight
       value: 60
       objectReference: {fileID: 0}
@@ -567,6 +577,10 @@ PrefabInstance:
       value: 45
       objectReference: {fileID: 0}
     - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: turbulenceIntensity
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692750535158210226, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
       propertyPath: spawnAngularSpeedMax
       value: 0.4
       objectReference: {fileID: 0}
@@ -585,7 +599,11 @@ PrefabInstance:
     - target: {fileID: 6593810614396451478, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
       propertyPath: m_Model
       value: 
-      objectReference: {fileID: 5022602860645237092, guid: 35cb9716c89cebb41a32d46d1d43c630, type: 3}
+      objectReference: {fileID: 5022602860645237092, guid: 22b32807765dff146898ad509d708d3d, type: 3}
+    - target: {fileID: 6593810614396451478, guid: e131a1c909413fd47ba991cab2860b72, type: 3}
+      propertyPath: m_BehaviorType
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

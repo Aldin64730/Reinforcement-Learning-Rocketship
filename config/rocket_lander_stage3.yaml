@@ -1,0 +1,110 @@
+# ML-Agents trainer config - Rocket Lander, STAGE 3 (wind: steady wind + gusts + turbulence)
+# Warm start from the Stage 2 policy (same 22 observations / 3 actions; wind is NOT observed):
+#   .\.venv\Scripts\python -m mlagents.trainers.learn config/rocket_lander_stage3.yaml --run-id=stage3_v1 --initialize-from=stage2_v1 --torch-device=cpu
+# then press Play in the Unity Editor (scene Assets/RocketLander/Scenes/RocketTraining.unity).
+#
+# Same hyperparameters and reward (v2) as Stage 2. Spawn conditions are fixed at the Stage 2 final
+# lesson; only the wind is increased by the curriculum.
+
+behaviors:
+  RocketLander:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 20480
+      learning_rate: 3.0e-4
+      learning_rate_schedule: linear
+      beta: 5.0e-3
+      beta_schedule: linear
+      epsilon: 0.2
+      epsilon_schedule: linear
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: false
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+    time_horizon: 256
+    max_steps: 3.5e7                # stage3_v1 ran to 2.0e7 (W4 reached only at 11.3M); continued with --resume to 3.5e7
+                                    # (the linear LR schedule then resumes at 3e-4 * (1 - 20/35) = 1.3e-4)
+    summary_freq: 20000
+    checkpoint_interval: 500000
+    keep_checkpoints: 10
+
+# Wind curriculum. Each episode draws a steady wind speed uniformly in [wind_speed_min, wind_speed_max]
+# from a random horizontal direction, plus gusts (up to gust_speed_max, ~6 per minute, 1-3 s, mean
+# direction +/-45 deg) and Perlin turbulence (turbulence_intensity, 30 % of it vertical).
+# Final lesson peaks at ~15-17 m/s: wind torque ~55 % of the side-pod torque; a landed rocket stays
+# upright up to at least 17 m/s peak (tested). Stronger wind (12 + 8 m/s) was tested and rejected:
+# its peak torque equals the control authority and its tipping moment exceeds the rocket's stability.
+#
+# Thresholds calibrated in Unity: Stage 2 policy (zero-shot) mean return 30.8 / 30.2 / 28.1 / 25.2 / 18.7
+# on W0..W4; landings return ~27-31, failures ~ -3..-8. L3 -> L4 requires ~95 % landings at W3.
+environment_parameters:
+  wind_speed_max:
+    curriculum:
+      - name: W0_Calm
+        completion_criteria: &W0
+          measure: reward
+          behavior: RocketLander
+          signal_smoothing: true
+          min_lesson_length: 300
+          threshold: 25.0
+        value: 0.0
+      - name: W1
+        completion_criteria: &W1
+          measure: reward
+          behavior: RocketLander
+          signal_smoothing: true
+          min_lesson_length: 300
+          threshold: 24.5
+        value: 2.5
+      - name: W2
+        completion_criteria: &W2
+          measure: reward
+          behavior: RocketLander
+          signal_smoothing: true
+          min_lesson_length: 300
+          threshold: 24.0
+        value: 5.0
+      - name: W3
+        completion_criteria: &W3
+          measure: reward
+          behavior: RocketLander
+          signal_smoothing: true
+          min_lesson_length: 300
+          threshold: 25.5
+        value: 7.5
+      - name: W4_Final
+        value: 10.0
+  gust_speed_max:
+    curriculum:
+      - { name: W0_Calm, completion_criteria: *W0, value: 0.0 }
+      - { name: W1, completion_criteria: *W1, value: 1.5 }
+      - { name: W2, completion_criteria: *W2, value: 2.5 }
+      - { name: W3, completion_criteria: *W3, value: 4.0 }
+      - { name: W4_Final, value: 5.0 }
+  turbulence_intensity:
+    curriculum:
+      - { name: W0_Calm, completion_criteria: *W0, value: 0.0 }
+      - { name: W1, completion_criteria: *W1, value: 0.4 }
+      - { name: W2, completion_criteria: *W2, value: 0.75 }
+      - { name: W3, completion_criteria: *W3, value: 1.1 }
+      - { name: W4_Final, value: 1.5 }
+  wind_speed_min: 0.0
+
+  # Spawn = Stage 2 final lesson (constant in Stage 3)
+  spawn_height_min: 10.0
+  spawn_height_max: 35.0
+  spawn_horizontal_radius: 20.0
+  spawn_tilt_max_deg: 30.0
+  spawn_speed_max: 5.0
+  spawn_angular_speed_max: 0.4
+  fuel_capacity: 100.0
+  max_episode_seconds: 45.0
+  bounds_radius: 45.0
+  ceiling_height: 60.0

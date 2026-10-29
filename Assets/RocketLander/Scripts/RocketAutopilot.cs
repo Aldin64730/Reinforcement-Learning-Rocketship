@@ -5,11 +5,17 @@ namespace RocketLander
     [System.Serializable]
     public class AutopilotGains
     {
-        [Header("Horizontal guidance (PD on position -> desired tilt)")]
+        [Header("Horizontal guidance (PID on position -> desired tilt)")]
         public float positionGain = 0.25f;     // (m/s^2) per m
         public float velocityGain = 1.0f;      // (m/s^2) per m/s
-        public float maxLateralAccel = 2f;     // m/s^2
+        public float maxLateralAccel = 2f;     // m/s^2 (PD part)
         public float maxTiltDeg = 15f;
+        [Tooltip("Integral gain ((m/s^2) per m per s). Cancels steady wind; 0 = pure PD (Stage 1-2 baseline).")]
+        public float integralGain = 0.1f;
+        [Tooltip("Largest wind-cancelling acceleration the integral may build up (m/s^2).")]
+        public float integralLimit = 3f;
+        [Tooltip("Only integrate while closer than this to the pad (m), to avoid wind-up during the approach (8 m caused overshoot and hovering).")]
+        public float integralRadius = 3f;
 
         [Header("Vertical guidance (descent-speed schedule)")]
         public float descentGain = 0.4f;       // desired descent speed per metre of altitude
@@ -26,7 +32,8 @@ namespace RocketLander
     }
 
     /// <summary>
-    /// Classical (non-learning) cascaded PD controller. Two uses:
+    /// Classical (non-learning) cascaded PD controller, with an optional integral term on horizontal
+    /// position (PID) so it can hold its position against steady wind (Stage 3). Two uses:
     ///  1. A sanity check that the environment is solvable with the given thrust and torque
     ///     (run with Behavior Type = Heuristic Only before training).
     ///  2. A baseline to compare the RL policy against in the thesis.
@@ -35,8 +42,11 @@ namespace RocketLander
     public static class RocketAutopilot
     {
         /// <returns>(main, pitch, roll) actions in [-1, 1].</returns>
+        /// <param name="integral">Integral state (horizontal acceleration, m/s^2). Owned by the caller, reset to zero each episode.</param>
+        /// <param name="dt">Time since the previous call (s), i.e. the decision interval.</param>
         public static Vector3 Compute(AutopilotGains g, Rigidbody rb, Vector3 feetPosition, Vector3 padTop,
-                                      float altitude, int feetOnPad, float mainThrustToWeight)
+                                      float altitude, int feetOnPad, float mainThrustToWeight,
+                                      ref Vector3 integral, float dt)
         {
             float gravity = -Physics.gravity.y;
             Quaternion rot = rb.rotation;
@@ -50,6 +60,10 @@ namespace RocketLander
             Vector3 horizontalVelocity = new Vector3(velocity.x, 0f, velocity.z);
             Vector3 desiredAccel = Vector3.ClampMagnitude(
                 g.positionGain * horizontalError - g.velocityGain * horizontalVelocity, g.maxLateralAccel);
+            // Integral term: slowly learns the steady push of the wind and leans against it.
+            if (feetOnPad == 0 && horizontalError.magnitude < g.integralRadius)
+                integral = Vector3.ClampMagnitude(integral + g.integralGain * horizontalError * dt, g.integralLimit);
+            desiredAccel += integral;
             Vector3 desiredUp = (desiredAccel + Vector3.up * gravity).normalized;
             if (Vector3.Angle(desiredUp, Vector3.up) > g.maxTiltDeg)
                 desiredUp = Vector3.RotateTowards(Vector3.up, desiredUp, g.maxTiltDeg * Mathf.Deg2Rad, 0f);

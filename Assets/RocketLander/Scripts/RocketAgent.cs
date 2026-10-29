@@ -149,6 +149,10 @@ namespace RocketLander
         Vector3 lastActions;          // (main, pitch, roll) as sent by the policy, [-1, 1]
         bool touchedDown;
         float spawnAltitude, spawnDistance, spawnTiltDeg, maxTiltDeg;
+        float windSpeedSum, windSpeedMax;   // wind actually felt by the rocket this episode
+        int windSteps;
+        Vector3 autopilotIntegral;
+        DecisionRequester decisionRequester;
         float touchdownSpeed;
         float manualThrottle;         // keyboard heuristic
 
@@ -185,7 +189,7 @@ namespace RocketLander
                 Debug.LogError($"[RocketAgent] Behavior Parameters must have {ContinuousActionCount} continuous actions and 0 discrete branches.", this);
             if (MaxStep != 0)
                 Debug.LogWarning("[RocketAgent] Set Max Step to 0: the time limit is handled by max_episode_seconds (with a timeout penalty).", this);
-            var dr = GetComponent<DecisionRequester>();
+            var dr = decisionRequester = GetComponent<DecisionRequester>();
             if (!dr || !dr.TakeActionsBetweenDecisions)
                 Debug.LogError("[RocketAgent] Needs a DecisionRequester with 'Take Actions Between Decisions' enabled (physics is applied every step).", this);
         }
@@ -205,6 +209,9 @@ namespace RocketLander
             touchdownSpeed = 0f;
             lastActions = new Vector3(-1f, 0f, 0f); // engine off, no torque
             manualThrottle = 0f;
+            autopilotIntegral = Vector3.zero;
+            windSpeedSum = windSpeedMax = 0f;
+            windSteps = 0;
             rShaping = rDense = rFuel = rTerminal = 0f;
             FlightState start = Measure();
             spawnAltitude = start.altitude;
@@ -298,6 +305,11 @@ namespace RocketLander
             float fuelBurned = rocket.ApplyControls(0.5f * (main + 1f), pitch, roll, dt);
             Give(ref rFuel, -rewards.fuelPenalty * fuelBurned);
             lastActions = new Vector3(main, pitch, roll);
+
+            float windSpeed = rocket.CurrentWind.magnitude; // updated inside ApplyControls
+            windSpeedSum += windSpeed;
+            windSpeedMax = Mathf.Max(windSpeedMax, windSpeed);
+            windSteps++;
         }
 
         public override void Heuristic(in ActionBuffers actionsOut)
@@ -308,8 +320,10 @@ namespace RocketLander
             {
                 rocket.LatchContacts(Academy.Instance.TotalStepCount);
                 FlightState s = Measure();
+                float decisionInterval = (decisionRequester ? decisionRequester.DecisionPeriod : 1) * Time.fixedDeltaTime;
                 a = RocketAutopilot.Compute(autopilot, rocket.Body, s.feetPosition, environment.PadTop,
-                                            s.altitude, rocket.FeetOnPad, rocket.mainThrustToWeight);
+                                            s.altitude, rocket.FeetOnPad, rocket.mainThrustToWeight,
+                                            ref autopilotIntegral, decisionInterval);
             }
             else
             {
@@ -417,6 +431,9 @@ namespace RocketLander
                 spawnDistance = spawnDistance,
                 spawnTiltDeg = spawnTiltDeg,
                 maxTiltDeg = maxTiltDeg,
+                windMeanSpeed = WindMeanSpeed,
+                windMaxSpeed = windSpeedMax,
+                windDirectionDeg = WindDirectionDeg(),
             });
             EndEpisode();
         }
@@ -427,6 +444,8 @@ namespace RocketLander
             public EpisodeOutcome outcome;
             public float reward, seconds, distance, touchdownSpeed, tiltDeg, fuelUsedFraction;
             public float spawnAltitude, spawnDistance, spawnTiltDeg, maxTiltDeg;
+            /// <summary>Mean / peak wind speed felt during the episode (m/s), mean wind direction it blows towards (deg, 0 = +Z).</summary>
+            public float windMeanSpeed, windMaxSpeed, windDirectionDeg;
         }
 
         /// <summary>Raised at the end of every episode, just before the rocket is reset.</summary>
@@ -448,6 +467,13 @@ namespace RocketLander
             stats.Add("Spawn/Height", spawnAltitude);
             stats.Add("Spawn/Distance", spawnDistance);
             stats.Add("Spawn/TiltDeg", spawnTiltDeg);
+
+            // Wind (Stage 3). Success per wind band: each band's curve is that band's landing rate.
+            float meanWind = WindMeanSpeed;
+            stats.Add("Wind/MeanSpeed", meanWind);
+            stats.Add("Wind/MaxSpeed", windSpeedMax);
+            string band = meanWind < 4f ? "0-4" : meanWind < 8f ? "4-8" : meanWind < 12f ? "8-12" : "12+";
+            stats.Add("WindSuccess/" + band + " m_s", outcome == EpisodeOutcome.Landed ? 1f : 0f);
             stats.Add("Rocket/FinalDistance", s.horizontalDistance);
             stats.Add("Rocket/FuelUsedFraction", 1f - rocket.FuelFraction);
             stats.Add("Rocket/FuelUsedMain", rocket.FuelUsedMain);
@@ -496,6 +522,16 @@ namespace RocketLander
             return s;
         }
 
+        float WindMeanSpeed => windSteps > 0 ? windSpeedSum / windSteps : 0f;
+
+        /// <summary>Direction the episode's mean wind blows towards, in degrees (0 = world +Z, 90 = +X).</summary>
+        float WindDirectionDeg()
+        {
+            WindField w = rocket.wind;
+            if (!w || w.MeanWind.sqrMagnitude < 1e-4f) return 0f;
+            return Mathf.Repeat(Mathf.Atan2(w.MeanWind.x, w.MeanWind.z) * Mathf.Rad2Deg, 360f);
+        }
+
         static float Clip(float v) => Mathf.Clamp(v, -1f, 1f);
         static Vector3 Clip(Vector3 v) => new Vector3(Clip(v.x), Clip(v.y), Clip(v.z));
 
@@ -503,8 +539,8 @@ namespace RocketLander
         {
             if (!showHud || rocket == null || rocket.Body == null || environment == null) return;
             FlightState s = Measure();
-            GUI.Box(new Rect(10, 10, 290, 205), GUIContent.none);
-            GUI.Label(new Rect(20, 15, 280, 200),
+            GUI.Box(new Rect(10, 10, 290, 222), GUIContent.none);
+            GUI.Label(new Rect(20, 15, 280, 218),
                 $"Altitude      {s.altitude,7:F2} m\n" +
                 $"Vertical spd  {s.velocity.y,7:F2} m/s\n" +
                 $"Speed         {s.speed,7:F2} m/s\n" +
@@ -514,6 +550,7 @@ namespace RocketLander
                 $"Pitch / Roll  {rocket.PitchCommand,5:F2} / {rocket.RollCommand:F2}\n" +
                 $"Fuel          {rocket.FuelFraction * 100f,6:F1} %\n" +
                 $"Feet on pad   {rocket.FeetOnPad}\n" +
+                $"Wind          {rocket.CurrentWind.magnitude,7:F1} m/s\n" +
                 $"Reward        {GetCumulativeReward(),7:F2}\n" +
                 $"Last episode  {lastOutcome} ({lastEpisodeReward:F2})");
         }
