@@ -44,103 +44,103 @@
     "RocketLander": {
         "checkpoints": [
             {
-                "steps": 15999972,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-15999972.onnx",
-                "reward": 18.53527954524877,
-                "creation_time": 1793286567.89621,
+                "steps": 30999996,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-30999996.onnx",
+                "reward": 21.565943857828778,
+                "creation_time": 1793296466.2770708,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-15999972.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-30999996.pt"
                 ]
             },
             {
-                "steps": 16499940,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-16499940.onnx",
-                "reward": 20.126264572143555,
-                "creation_time": 1793286862.6516073,
+                "steps": 31499915,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-31499915.onnx",
+                "reward": 23.105078091988197,
+                "creation_time": 1793296731.2385333,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-16499940.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-31499915.pt"
                 ]
             },
             {
-                "steps": 16999981,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-16999981.onnx",
-                "reward": 17.177407015453685,
-                "creation_time": 1793287154.6810734,
+                "steps": 31999916,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-31999916.onnx",
+                "reward": 24.699412727355956,
+                "creation_time": 1793296998.3782806,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-16999981.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-31999916.pt"
                 ]
             },
             {
-                "steps": 17499861,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-17499861.onnx",
-                "reward": 20.253151009935852,
-                "creation_time": 1793287447.1819375,
+                "steps": 32499936,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-32499936.onnx",
+                "reward": 22.134348349693493,
+                "creation_time": 1793297263.35089,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-17499861.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-32499936.pt"
                 ]
             },
             {
-                "steps": 17999839,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-17999839.onnx",
-                "reward": 21.5329011257957,
-                "creation_time": 1793287740.3432546,
+                "steps": 32999950,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-32999950.onnx",
+                "reward": 22.115377186219902,
+                "creation_time": 1793297529.06328,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-17999839.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-32999950.pt"
                 ]
             },
             {
-                "steps": 18499959,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-18499959.onnx",
-                "reward": 22.487017952162645,
-                "creation_time": 1793288036.425663,
+                "steps": 33499995,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-33499995.onnx",
+                "reward": 21.991522283265084,
+                "creation_time": 1793297797.545541,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-18499959.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-33499995.pt"
                 ]
             },
             {
-                "steps": 18999932,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-18999932.onnx",
-                "reward": 21.040091934902915,
-                "creation_time": 1793288329.5586903,
+                "steps": 33999931,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-33999931.onnx",
+                "reward": 20.757144661232978,
+                "creation_time": 1793298063.4530807,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-18999932.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-33999931.pt"
                 ]
             },
             {
-                "steps": 19499896,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-19499896.onnx",
-                "reward": 21.799971413194086,
-                "creation_time": 1793288623.1178474,
+                "steps": 34499902,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-34499902.onnx",
+                "reward": 21.292372024854025,
+                "creation_time": 1793298329.5259392,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-19499896.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-34499902.pt"
                 ]
             },
             {
-                "steps": 19999932,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-19999932.onnx",
-                "reward": 19.00937255708183,
-                "creation_time": 1793288918.784828,
+                "steps": 34999930,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-34999930.onnx",
+                "reward": 23.02396527528763,
+                "creation_time": 1793298598.1092184,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-19999932.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-34999930.pt"
                 ]
             },
             {
-                "steps": 20000188,
-                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-20000188.onnx",
-                "reward": 19.00937255708183,
-                "creation_time": 1793288918.818722,
+                "steps": 35000029,
+                "file_path": "results\\stage3_v1\\RocketLander\\RocketLander-35000029.onnx",
+                "reward": 23.158285757390463,
+                "creation_time": 1793298598.137063,
                 "auxillary_file_paths": [
-                    "results\\stage3_v1\\RocketLander\\RocketLander-20000188.pt"
+                    "results\\stage3_v1\\RocketLander\\RocketLander-35000029.pt"
                 ]
             }
         ],
         "final_checkpoint": {
-            "steps": 20000188,
+            "steps": 35000029,
             "file_path": "results\\stage3_v1\\RocketLander.onnx",
-            "reward": 19.00937255708183,
-            "creation_time": 1793288918.818722,
+            "reward": 23.158285757390463,
+            "creation_time": 1793298598.137063,
             "auxillary_file_paths": [
-                "results\\stage3_v1\\RocketLander\\RocketLander-20000188.pt"
+                "results\\stage3_v1\\RocketLander\\RocketLander-35000029.pt"
             ]
         }
     },

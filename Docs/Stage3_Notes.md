@@ -117,4 +117,33 @@ Wind bands are by mean wind speed in the episode. Files: `Evaluation/*stage3_v1_
   - Firmer touchdowns in calm air (1.1 vs. 0.6 m/s).
   - More crashes: the policy became more aggressive.
 - **Precision drops with wind speed:** 0.85 → 2.06 → 3.65 m from the centre. The memoryless policy cannot estimate the steady wind, so it lands downwind of the centre. The PID's integral term avoids this, holding 0.7-0.8 m at all wind speeds. This directly motivates ablation C2 (memory or stacked observations) and C1 (privileged wind observation).
-- **Recommended next step:** continue training on W4 (`--resume`, max_steps 2.0e7 → 3.5e7).
+- **Next step taken:** training continued on W4 (`--resume`, max_steps 2.0e7 → 3.5e7). See section 6.
+
+## 6. Results after continued training (`stage3_v1`, resumed to 35 M steps, about 292k episodes in total)
+
+**Training on W4, 20 M → 35 M steps** (stochastic policy):
+- The 8-12 m/s band rose from about 0.56 to 0.65-0.76.
+- `Outcome/Timeout` fell from about 8% to about 0-2%. The policy stopped hovering and commits to the landing.
+- `Outcome/Crashed` rose to about 3-7%.
+
+The final model is saved as `Assets/RocketLander/Models/RocketLander_stage3_v1_35M.onnx`. The 20 M model is kept as `RocketLander_stage3_v1.onnx`.
+
+**Evaluation at W4** (deterministic; file `Evaluation/RocketShowcase_RocketLander_stage3_v1_35M_20261029_193435.csv`):
+
+| Policy | n | Success | 0-4 m/s | 4-8 m/s | 8-12 m/s | Landing distance | Touchdown speed | Main failures |
+|---|---|---|---|---|---|---|---|---|
+| **Stage 3 PPO @ 35 M** | 1000 | **90.0%** | 95.9% | 94.5% | **72.8%** | 1.71 m | 0.83 m/s | Crashed 5.5%, OffPad 3.6% |
+| Stage 3 PPO @ 20 M | 1700 | 83.1% | 95.3% | 92.5% | 44.5% | 1.72 m | 0.93 m/s | Timeout 9.1%, Crashed 4.1% |
+| Stage 2 PPO (zero-shot) | 600 | 71.0% | 100% | 77.9% | 7.0% | 1.55 m | 0.57 m/s | Timeout 22% |
+| PID autopilot | 500 | 77.4% | 98.3% | 96.9% | 16.8% | 0.79 m | 0.87 m/s | Timeout 21% |
+
+**Failure analysis @ 35 M:**
+- **Crashed (55/1000).** These are spread over all wind bands (15 / 20 / 20), so they are *not* primarily caused by wind. They come from higher spawn tilt (mean 19.8° vs. 15° overall), reach a 44° peak tilt, and hit at about 8 m/s after about 8 s. This is the aggressive high-tilt recovery already seen in Stage 2 (0.4% there), now more frequent. Wind training made the policy more aggressive.
+  - Possible fix: a larger crash penalty or a stronger descent-envelope penalty (a reward v3 ablation).
+- **OffPad (36/1000).** All of these are in the 8-12 m/s band. They are soft (0.4 m/s) but 4.6 m from the centre, i.e. blown past the pad edge. This is the same downwind-drift limitation as the precision numbers (0.81 → 1.76 → 3.47 m by wind band).
+  - Possible fix: memory (stacked observations / LSTM) or a privileged wind observation (ablations C1/C2).
+
+**Conclusion for Stage 3:**
+- Training in wind raised success at the hardest conditions from 71% (Stage 2 policy) to 90%.
+- In strong wind it went from 7% to 73%, which is 4.3× better than the PID baseline in that band.
+- The remaining gap is precision and safety in strong wind, which a memoryless, wind-blind policy can only partly solve.

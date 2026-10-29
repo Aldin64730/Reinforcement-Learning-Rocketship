@@ -108,7 +108,6 @@ namespace RocketLander
             Academy.Instance.AutomaticSteppingEnabled = false;
             Physics.simulationMode = SimulationMode.Script;
             rocket.Body.isKinematic = false;
-            if (windArrow) windArrow.enabled = false;
             rocket.Body.interpolation = RigidbodyInterpolation.None;
         }
 
@@ -240,50 +239,97 @@ namespace RocketLander
                                     Mathf.Lerp(a.back, b.back, t), Mathf.Lerp(a.left, b.left, t),
                                     Mathf.Lerp(a.right, b.right, t));
             replayWind = Vector3.Lerp(a.wind, b.wind, t);
-            UpdateWindArrow();
         }
 
-        // ---------------------------------------------------------------- wind arrow
+        // ---------------------------------------------------------------- 2D wind indicator
 
-        [Header("Wind arrow (replay)")]
-        [Tooltip("Arrow length per m/s of wind.")]
-        public float windArrowScale = 0.6f;
+        [Header("Wind indicator (2D, next to the info panel)")]
         public Color windArrowColor = new Color(0.2f, 0.75f, 1f);
 
         Vector3 replayWind;
-        LineRenderer windArrow;
+        Texture2D arrowTexture, ringTexture;
 
-        /// <summary>Draws an arrow beside the rocket that points where the wind blows, length proportional to speed (min 1 m).</summary>
-        void UpdateWindArrow()
+        /// <summary>
+        /// Draws a compass-style panel: the arrow points where the wind blows, seen from above and
+        /// relative to the camera (up = away from the camera / into the screen, right = screen right).
+        /// </summary>
+        void DrawWindIndicator(Rect panel, GUIStyle style)
         {
-            if (!windArrow)
-            {
-                windArrow = new GameObject("WindArrow").AddComponent<LineRenderer>();
-                Shader shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Sprites/Default");
-                var mat = new Material(shader);
-                mat.SetColor("_BaseColor", windArrowColor);
-                mat.color = windArrowColor;
-                windArrow.sharedMaterial = mat;
-                windArrow.positionCount = 5;
-                windArrow.widthMultiplier = 0.3f;
-                windArrow.numCapVertices = 2;
-                windArrow.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            }
-            Vector3 w = new Vector3(replayWind.x, 0f, replayWind.z);
-            bool show = phase == Phase.Replaying && w.magnitude > 0.2f;
-            windArrow.enabled = show;
-            if (!show) return;
+            if (!arrowTexture) arrowTexture = MakeArrowTexture(64);
+            if (!ringTexture) ringTexture = MakeRingTexture(128);
 
-            // Beside the rocket (to the camera's right, above the pods), pointing where the wind blows.
-            Vector3 dir = w.normalized;
-            float length = Mathf.Max(1f, w.magnitude * windArrowScale);
-            Vector3 camRight = showcaseCamera ? Vector3.ProjectOnPlane(showcaseCamera.transform.right, Vector3.up).normalized : Vector3.right;
-            Vector3 centre = rocket.transform.position + camRight * 5f + Vector3.up * 2.5f;
-            Vector3 tail = centre - dir * (length * 0.5f);
-            Vector3 tip = centre + dir * (length * 0.5f);
-            Vector3 side = Vector3.Cross(Vector3.up, dir) * 0.7f + Vector3.up * 0.3f; // tilt the head up so it reads end-on too
-            Vector3 back = -dir * 1.0f;
-            windArrow.SetPositions(new[] { tail, tip, tip + back + side, tip, tip + back - side });
+            GUI.Box(panel, GUIContent.none);
+            var centered = new GUIStyle(style) { alignment = TextAnchor.MiddleCenter };
+            GUI.Label(new Rect(panel.x, panel.y + 4, panel.width, 22), "Wind", centered);
+
+            float dial = panel.width - 40f;
+            var dialRect = new Rect(panel.x + (panel.width - dial) * 0.5f, panel.y + 30f, dial, dial);
+            Vector2 c = dialRect.center;
+            Color old = GUI.color;
+            GUI.color = new Color(1f, 1f, 1f, 0.35f);
+            GUI.DrawTexture(dialRect, ringTexture);
+            GUI.color = old;
+
+            Vector3 w = new Vector3(replayWind.x, 0f, replayWind.z);
+            float speed = w.magnitude;
+            if (speed > 0.2f)
+            {
+                // Screen angle of the wind direction, clockwise from "up" (= camera forward on the ground).
+                Transform cam = showcaseCamera ? showcaseCamera.transform : null;
+                Vector3 fwd = cam ? Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized : Vector3.forward;
+                Vector3 right = cam ? Vector3.ProjectOnPlane(cam.right, Vector3.up).normalized : Vector3.right;
+                float angle = Mathf.Atan2(Vector3.Dot(w, right), Vector3.Dot(w, fwd)) * Mathf.Rad2Deg;
+
+                // Arrow length grows with wind speed (full dial at 15 m/s).
+                float len = dial * Mathf.Lerp(0.45f, 0.95f, Mathf.Clamp01(speed / 15f));
+                var arrowRect = new Rect(c.x - len * 0.5f, c.y - len * 0.5f, len, len);
+                Matrix4x4 m = GUI.matrix;
+                GUIUtility.RotateAroundPivot(angle, c);
+                GUI.color = windArrowColor;
+                GUI.DrawTexture(arrowRect, arrowTexture);
+                GUI.color = old;
+                GUI.matrix = m;
+            }
+            else
+            {
+                GUI.Label(new Rect(dialRect.x, c.y - 11f, dialRect.width, 22f), "calm", centered);
+            }
+            GUI.Label(new Rect(panel.x, dialRect.yMax + 2f, panel.width, 22f), $"{speed:F1} m/s", centered);
+            var small = new GUIStyle(centered) { fontSize = 11 };
+            GUI.Label(new Rect(panel.x, dialRect.yMax + 22f, panel.width, 18f), "top view, up = into the screen", small);
+        }
+
+        // An upward-pointing white arrow (shaft + triangular head) on a transparent background.
+        static Texture2D MakeArrowTexture(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            float half = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = Mathf.Abs(x + 0.5f - half);
+                    float v = (y + 0.5f) / size; // 0 = bottom (tail), 1 = top (tip)
+                    bool shaft = v > 0.08f && v < 0.62f && dx < size * 0.09f;
+                    bool head = v >= 0.58f && v < 0.97f && dx < size * 0.36f * (0.97f - v) / 0.39f;
+                    tex.SetPixel(x, y, shaft || head ? Color.white : Color.clear);
+                }
+            tex.Apply();
+            return tex;
+        }
+
+        // A thin circle used as the compass dial.
+        static Texture2D MakeRingTexture(int size)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            float r = size * 0.5f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r));
+                    tex.SetPixel(x, y, d > r - 3f && d < r - 0.5f ? Color.white : Color.clear);
+                }
+            tex.Apply();
+            return tex;
         }
 
         // ---------------------------------------------------------------- camera
@@ -339,8 +385,8 @@ namespace RocketLander
         void OnGUI()
         {
             var style = new GUIStyle(GUI.skin.label) { fontSize = 16 };
-            GUI.Box(new Rect(10, 10, 430, 300), GUIContent.none);
-            var r = new Rect(22, 18, 410, 290);
+            GUI.Box(new Rect(10, 10, 430, 260), GUIContent.none);
+            var r = new Rect(22, 18, 410, 250);
 
             if (phase == Phase.Evaluating)
             {
@@ -365,9 +411,10 @@ namespace RocketLander
                 $"Touchdown      {s.touchdownSpeed:F2} m/s\n" +
                 $"Flight time    {s.seconds:F1} s\n" +
                 $"Wind           mean {s.windMeanSpeed:F1} m/s, peak {s.windMaxSpeed:F1} m/s\n" +
-                $"Wind now       {new Vector3(now.wind.x, 0f, now.wind.z).magnitude:F1} m/s (blue arrow)\n\n" +
+                $"Wind now       {new Vector3(now.wind.x, 0f, now.wind.z).magnitude:F1} m/s (see indicator)\n\n" +
                 $"Replay {Mathf.Min(replayTime, duration):F1} / {duration:F1} s   x{replaySpeed:0.###}{(paused ? "  PAUSED" : "")}   alt {Mathf.Max(0f, altitude):F1} m",
                 style);
+            DrawWindIndicator(new Rect(450, 10, 170, 210), style);
             GUI.Label(new Rect(12, Screen.height - 30, 700, 24),
                 "B criterion   R restart   Space pause   +/- speed   N new evaluation", style);
         }
